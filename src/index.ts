@@ -5,7 +5,7 @@ import { CONSTANTS, testCliArgsInput } from '@cli/terminal.js';
 import testCommand from '@commands/test-command.js';
 import Schema from '@schema';
 import gradient from 'gradient-string';
-import {rssParser} from './utils/import-rss.js';
+import {fitGirlMagnets, rssParser} from './utils/import-rss.js';
 import { z } from 'zod';
 
 // ? 👇 title text gradient colors. for more colors see: `https://cssgradient.io/gradient-backgrounds`
@@ -113,3 +113,4 @@ async function main() {
 
 // main(); // 🚀 Start the app.
 rssParser()
+// fitGirlMagnets()

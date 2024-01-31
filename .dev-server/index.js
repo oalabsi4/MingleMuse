@@ -745,11 +745,47 @@ async function rssParser() {
     defaultRSS: 2,
     maxRedirects: 500
   });
+  var regexPattern = /class="wplp-box-item"><a href="([^"]+)"/g;
+  var regex = new RegExp(regexPattern);
+  var matches = [];
+  var match;
   try {
     const results = await parser.parseURL("https://fitgirl-repacks.site/feed/");
-    const titles = results.items.map((item) => item.title).flatMap((e) => e !== "A Call for Donations" ? e : null);
-    const links = results.items.map((item) => item.link).flatMap((e) => e !== "A Call for Donations" ? e : null);
-    console.log();
+    while ((match = regex.exec(results.items[0]["content:encoded"])) !== null) {
+      matches.push(match[1]);
+    }
+    const games = [];
+    for (let i = 0; i < matches.length; i++) {
+      const element = matches[i];
+      const gmameNameRegex = /https:\/\/fitgirl-repacks\.site\/([^a]+)\//g;
+      const nameRegex = new RegExp(gmameNameRegex);
+      const name = nameRegex.exec(element);
+      const magnet = await fitGirlMagnets(element);
+      if (name !== null && magnet !== void 0) {
+        const gamesInfo = {
+          name: name[1].replaceAll("-", " "),
+          link: element,
+          magnet
+        };
+        games.push(gamesInfo);
+      }
+    }
+    console.log(games);
+  } catch (error) {
+    console.log(error);
+  }
+}
+async function fitGirlMagnets(gameLink) {
+  const magnetRegex = /1337x<\/a>\s\|\s\[<a\shref="([^"]+)">/gm;
+  try {
+    const response = await fetch(gameLink);
+    const text = await response.text();
+    const magnetLink = new RegExp(magnetRegex);
+    const link = magnetLink.exec(text);
+    if (!link)
+      return;
+    console.log(link[1]);
+    return link[1];
   } catch (error) {
     console.log(error);
   }
