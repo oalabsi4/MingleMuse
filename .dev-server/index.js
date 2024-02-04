@@ -733,66 +733,71 @@ testCommand.schema = commandSchema_default.createCommand({
 
 // src/index.ts
 import gradient from "../node_modules/gradient-string/index.js";
+import { z as z4 } from "../node_modules/zod/lib/index.mjs";
 
-// src/utils/import-rss.ts
+// src/sites/yts.ts
 import Parser from "../node_modules/rss-parser/index.js";
-async function rssParser() {
-  const parser = new Parser({
-    customFields: {
-      feed: ["Custom_Fields"],
-      item: ["content:encoded"]
-    },
-    defaultRSS: 2,
-    maxRedirects: 500
-  });
-  var regexPattern = /class="wplp-box-item"><a href="([^"]+)"/g;
-  var regex = new RegExp(regexPattern);
-  var matches = [];
-  var match;
+async function ytsRss() {
+  const parser = new Parser();
+  const ytsRegex = {
+    imdbRatingRegex: /([0-9].[0-9]\/10)|(10|[0-9]\/10)$/gm,
+    sizeRegex: /([0-9]?[0-9]?[0-9].[0-9]?[0-9]\s?(GB|MB))|([0-9]?[0-9]\s?(GB|MB))/gm,
+    durationRegex: /([0-9]hr\s?[0-5]?[0-9]\s?min)/gm,
+    descriptionRegex: /[0-9]\s?min\n?(.*)/gm,
+    genreRegex: /Genre:\s?(\w*\s?\/\s?\w*)/gm,
+    imageLinkRegex: /https:\/\/img.yts.mx\/assets\/images\/\w*\/.*?\/[^"]+"/gm
+  };
+  const movies = [];
   try {
-    const results = await parser.parseURL("https://fitgirl-repacks.site/feed/");
-    while ((match = regex.exec(results.items[0]["content:encoded"])) !== null) {
-      matches.push(match[1]);
+    const feed = await parser.parseURL("https://yts.am/rss");
+    const items = feed.items;
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const imdbRating = execRegex(
+        ytsRegex.imdbRatingRegex,
+        item.content ?? "",
+        1
+      );
+      const size = execRegex(ytsRegex.sizeRegex, item.content ?? "", 1);
+      const duration = execRegex(ytsRegex.durationRegex, item.content ?? "", 1);
+      const description = execRegex(
+        ytsRegex.descriptionRegex,
+        item.content ?? "",
+        1
+      ).replace(`<br /><br />`, "");
+      const genre = execRegex(ytsRegex.genreRegex, item.content ?? "", 1);
+      const imageLink = execRegex(
+        ytsRegex.imageLinkRegex,
+        item.content ?? "",
+        0
+      ).replace(`"`, "");
+      const title = item.title;
+      const link = item.link;
+      movies.push({
+        imdbRating,
+        size,
+        duration,
+        description,
+        genre,
+        imageLink,
+        title,
+        link
+      });
     }
-    const games = [];
-    for (let i = 0; i < matches.length; i++) {
-      const element = matches[i];
-      const gmameNameRegex = /https:\/\/fitgirl-repacks\.site\/([^a]+)\//g;
-      const nameRegex = new RegExp(gmameNameRegex);
-      const name = nameRegex.exec(element);
-      const magnet = await fitGirlMagnets(element);
-      if (name !== null && magnet !== void 0) {
-        const gamesInfo = {
-          name: name[1].replaceAll("-", " "),
-          link: element,
-          magnet
-        };
-        games.push(gamesInfo);
-      }
-    }
-    console.log(games);
+    console.log(movies, "ytsRss");
   } catch (error) {
-    console.log(error);
+    console.log(error, "ytsRss");
   }
 }
-async function fitGirlMagnets(gameLink) {
-  const magnetRegex = /1337x<\/a>\s\|\s\[<a\shref="([^"]+)">/gm;
-  try {
-    const response = await fetch(gameLink);
-    const text = await response.text();
-    const magnetLink = new RegExp(magnetRegex);
-    const link = magnetLink.exec(text);
-    if (!link)
-      return;
-    console.log(link[1]);
-    return link[1];
-  } catch (error) {
-    console.log(error);
-  }
+function execRegex(regex, value, index) {
+  const valueRegex = new RegExp(regex);
+  const challenge = valueRegex.exec(value);
+  if (challenge === null || challenge[index] === `<br /><br />`)
+    return "Not Found";
+  return challenge[index];
 }
 
 // src/index.ts
-import { z as z4 } from "../node_modules/zod/lib/index.mjs";
 var coolGradient = gradient([
   { color: "#FA8BFF", pos: 0 },
   { color: "#2BD2FF", pos: 0.5 },
@@ -811,5 +816,5 @@ console.log(
 if (CONSTANTS.isDev) {
   testCliArgsInput('test --name="John Doe" --age="30" arg1 arg2 arg3');
 }
-rssParser();
+ytsRss();
 //# sourceMappingURL=index.js.map
